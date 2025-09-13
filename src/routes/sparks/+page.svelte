@@ -7,21 +7,58 @@
 	interface Spark {
 		id: string;
 		title: string;
-		content: string;
 		initialThoughts?: string;
 		backstory?: string;
+		userId: string;
 		createdAt: string;
-		updatedAt: string;
+	}
+
+	interface PaginatedSparkResponse {
+		data: Spark[];
+		pagination: {
+			currentPage: number;
+			totalPages: number;
+			totalItems: number;
+			itemsPerPage: number;
+			hasNextPage: boolean;
+			hasPreviousPage: boolean;
+		};
+	}
+
+	interface SparkFilters {
+		page: number;
+		limit: number;
+		sortBy: 'title' | 'createdAt' | 'initialThoughts' | 'backstory';
+		sortOrder: 'asc' | 'desc';
+		title?: string;
+		initialThoughts?: string;
+		backstory?: string;
+		createdAfter?: string;
+		createdBefore?: string;
+		hasInitialThoughts?: boolean;
+		hasBackstory?: boolean;
 	}
 
 	let authState = $state(getAuthState());
 	let sparks = $state<Spark[]>([]);
+	let pagination = $state<PaginatedSparkResponse['pagination'] | null>(null);
 	let userStats = $state<UserStatsResponse | null>(null);
 	let isLoading = $state(true);
 	let isLoadingStats = $state(true);
 	let error = $state('');
 	let statsError = $state('');
 	let showCreateForm = $state(false);
+
+	// Filters and search
+	let filters = $state<SparkFilters>({
+		page: 1,
+		limit: 10,
+		sortBy: 'createdAt',
+		sortOrder: 'desc'
+	});
+	let searchTitle = $state('');
+	let searchInitialThoughts = $state('');
+	let showFilters = $state(false);
 
 	// New spark form
 	let newSpark = $state({
@@ -43,7 +80,22 @@
 		try {
 			isLoading = true;
 			error = '';
-			const response = await authenticatedFetch('http://localhost:3000/api/sparks');
+
+			// Build query parameters
+			const params = new URLSearchParams();
+			params.append('page', filters.page.toString());
+			params.append('limit', filters.limit.toString());
+			params.append('sortBy', filters.sortBy);
+			params.append('sortOrder', filters.sortOrder);
+
+			if (searchTitle.trim()) params.append('title', searchTitle.trim());
+			if (searchInitialThoughts.trim()) params.append('initialThoughts', searchInitialThoughts.trim());
+			if (filters.createdAfter) params.append('createdAfter', filters.createdAfter);
+			if (filters.createdBefore) params.append('createdBefore', filters.createdBefore);
+			if (filters.hasInitialThoughts !== undefined) params.append('hasInitialThoughts', filters.hasInitialThoughts.toString());
+			if (filters.hasBackstory !== undefined) params.append('hasBackstory', filters.hasBackstory.toString());
+
+			const response = await authenticatedFetch(`http://localhost:3000/api/sparks?${params.toString()}`);
 
 			if (!response.ok) {
 				if (response.status === 401) {
@@ -54,7 +106,9 @@
 				throw new Error(`Failed to load sparks: ${response.status}`);
 			}
 
-			sparks = await response.json();
+			const result: PaginatedSparkResponse = await response.json();
+			sparks = result.data;
+			pagination = result.pagination;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load sparks';
 			console.error('Error loading sparks:', err);
@@ -96,10 +150,8 @@
 				throw new Error(`Failed to create spark: ${response.status}`);
 			}
 
-			const createdSpark = await response.json();
-			sparks = [createdSpark, ...sparks];
-
-			// Refresh stats after creating a new spark
+			// Refresh the spark list and stats after creating
+			await loadSparks();
 			loadUserStats();
 
 			// Reset form
@@ -109,6 +161,53 @@
 			error = err instanceof Error ? err.message : 'Failed to create spark';
 			console.error('Error creating spark:', err);
 		}
+	}
+
+	// Pagination functions
+	function goToPage(page: number) {
+		filters.page = page;
+		loadSparks();
+	}
+
+	function nextPage() {
+		if (pagination?.hasNextPage) {
+			goToPage(filters.page + 1);
+		}
+	}
+
+	function previousPage() {
+		if (pagination?.hasPreviousPage) {
+			goToPage(filters.page - 1);
+		}
+	}
+
+	// Search and filter functions
+	function applyFilters() {
+		filters.page = 1; // Reset to first page when filtering
+		loadSparks();
+	}
+
+	function resetFilters() {
+		filters = {
+			page: 1,
+			limit: 10,
+			sortBy: 'createdAt',
+			sortOrder: 'desc'
+		};
+		searchTitle = '';
+		searchInitialThoughts = '';
+		loadSparks();
+	}
+
+	function changeSortBy(newSortBy: SparkFilters['sortBy']) {
+		if (filters.sortBy === newSortBy) {
+			filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			filters.sortBy = newSortBy;
+			filters.sortOrder = 'desc';
+		}
+		filters.page = 1;
+		loadSparks();
 	}
 
 	function handleDevelop(spark: Spark) {
@@ -195,6 +294,19 @@
 		{/if}
 
 		<div class="actions-bar">
+			<div class="actions-left">
+				<button
+					onclick={() => showFilters = !showFilters}
+					class="btn btn-neutral"
+				>
+					{showFilters ? 'Hide Filters' : 'Show Filters'}
+				</button>
+				{#if pagination}
+					<span class="results-count">
+						{pagination.totalItems} spark{pagination.totalItems !== 1 ? 's' : ''}
+					</span>
+				{/if}
+			</div>
 			<button
 				onclick={() => showCreateForm = !showCreateForm}
 				class="btn btn-primary"
@@ -202,6 +314,96 @@
 				{showCreateForm ? 'Cancel' : '+ New Spark'}
 			</button>
 		</div>
+
+		{#if showFilters}
+			<div class="card filters-panel mb-xl">
+				<div class="card-header">
+					<h2>Search & Filters</h2>
+				</div>
+				<div class="card-body">
+					<div class="filters-grid">
+						<div class="form-group">
+							<label for="searchTitle" class="form-label">Search Title</label>
+							<input
+								id="searchTitle"
+								type="text"
+								bind:value={searchTitle}
+								placeholder="Search by title..."
+								class="form-input"
+								onkeydown={(e) => e.key === 'Enter' && applyFilters()}
+							/>
+						</div>
+						<div class="form-group">
+							<label for="searchThoughts" class="form-label">Search Initial Thoughts</label>
+							<input
+								id="searchThoughts"
+								type="text"
+								bind:value={searchInitialThoughts}
+								placeholder="Search initial thoughts..."
+								class="form-input"
+								onkeydown={(e) => e.key === 'Enter' && applyFilters()}
+							/>
+						</div>
+						<div class="form-group">
+							<label for="sortBy" class="form-label">Sort By</label>
+							<select
+								id="sortBy"
+								bind:value={filters.sortBy}
+								onchange={applyFilters}
+								class="form-input"
+							>
+								<option value="createdAt">Created Date</option>
+								<option value="title">Title</option>
+								<option value="initialThoughts">Initial Thoughts</option>
+								<option value="backstory">Backstory</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="sortOrder" class="form-label">Sort Order</label>
+							<select
+								id="sortOrder"
+								bind:value={filters.sortOrder}
+								onchange={applyFilters}
+								class="form-input"
+							>
+								<option value="desc">Newest First</option>
+								<option value="asc">Oldest First</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="hasInitialThoughts" class="form-label">Has Initial Thoughts</label>
+							<select
+								id="hasInitialThoughts"
+								bind:value={filters.hasInitialThoughts}
+								onchange={applyFilters}
+								class="form-input"
+							>
+								<option value={undefined}>Any</option>
+								<option value={true}>Yes</option>
+								<option value={false}>No</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="hasBackstory" class="form-label">Has Backstory</label>
+							<select
+								id="hasBackstory"
+								bind:value={filters.hasBackstory}
+								onchange={applyFilters}
+								class="form-input"
+							>
+								<option value={undefined}>Any</option>
+								<option value={true}>Yes</option>
+								<option value={false}>No</option>
+							</select>
+						</div>
+					</div>
+					<div class="form-actions">
+						<button onclick={applyFilters} class="btn btn-primary">Apply Filters</button>
+						<button onclick={resetFilters} class="btn btn-neutral">Reset All</button>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		{#if showCreateForm}
 			<div class="card create-form mb-xl">
@@ -287,6 +489,35 @@
 					</div>
 				{/each}
 			</div>
+
+			{#if pagination && pagination.totalPages > 1}
+				<div class="pagination">
+					<button
+						onclick={previousPage}
+						disabled={!pagination.hasPreviousPage}
+						class="btn btn-neutral btn-sm pagination-btn"
+					>
+						← Previous
+					</button>
+
+					<div class="pagination-info">
+						<span class="current-page">
+							Page {pagination.currentPage} of {pagination.totalPages}
+						</span>
+						<span class="items-info">
+							({pagination.itemsPerPage} per page)
+						</span>
+					</div>
+
+					<button
+						onclick={nextPage}
+						disabled={!pagination.hasNextPage}
+						class="btn btn-neutral btn-sm pagination-btn"
+					>
+						Next →
+					</button>
+				</div>
+			{/if}
 		{/if}
 	</main>
 </div>
@@ -368,8 +599,74 @@
 
 	.actions-bar {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
+		align-items: center;
 		margin-bottom: var(--spacing-2xl);
+		flex-wrap: wrap;
+		gap: var(--spacing-lg);
+	}
+
+	.actions-left {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-lg);
+		flex-wrap: wrap;
+	}
+
+	.results-count {
+		color: var(--text-muted);
+		font-size: var(--text-sm);
+		font-weight: var(--font-weight-medium);
+	}
+
+	/* Filters Panel */
+	.filters-panel .card-header h2 {
+		margin: 0;
+		color: var(--text-primary);
+		font-size: var(--text-lg);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.filters-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: var(--spacing-lg);
+		margin-bottom: var(--spacing-xl);
+	}
+
+	/* Pagination */
+	.pagination {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: var(--spacing-lg);
+		margin-top: var(--spacing-2xl);
+		padding: var(--spacing-lg);
+		border-top: 1px solid var(--border-color);
+	}
+
+	.pagination-info {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-xs);
+		min-width: 140px;
+	}
+
+	.current-page {
+		font-weight: var(--font-weight-semibold);
+		color: var(--text-primary);
+		font-size: var(--text-sm);
+	}
+
+	.items-info {
+		font-size: var(--text-xs);
+		color: var(--text-muted);
+	}
+
+	.pagination-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.create-form .card-header h2 {
@@ -502,6 +799,25 @@
 
 		.actions-bar {
 			justify-content: stretch;
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.actions-left {
+			justify-content: space-between;
+		}
+
+		.filters-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.pagination {
+			flex-direction: column;
+			gap: var(--spacing-md);
+		}
+
+		.pagination-info {
+			order: -1;
 		}
 	}
 </style>
