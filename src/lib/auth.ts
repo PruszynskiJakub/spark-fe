@@ -124,6 +124,27 @@ export async function updateUserStrategy(strategy: string): Promise<User> {
 	return updatedUser;
 }
 
+// User stats interface
+export interface UserStatsResponse {
+	totalSparks: number;
+	thisWeekSparks: number;
+}
+
+// Get user stats
+export async function getUserStats(): Promise<UserStatsResponse> {
+	const response = await authenticatedFetch('http://localhost:3000/api/users/me/stats');
+
+	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuth();
+			throw new Error('Authentication expired');
+		}
+		throw new Error(`Failed to fetch user stats: ${response.status}`);
+	}
+
+	return response.json();
+}
+
 // Test sparks endpoints
 export async function testSparksEndpoints(): Promise<{ getSparks: any[], createSpark: any }> {
 	// Test GET sparks
