@@ -150,8 +150,8 @@
 
 <div class="spark-details-container">
 	<header class="header">
-		<div class="header-content">
-			<button onclick={() => goto('/sparks')} class="back-btn">
+		<div class="header-content container">
+			<button onclick={() => goto('/sparks')} class="btn btn-neutral btn-sm">
 				← Back to Sparks
 			</button>
 			{#if authState.user}
@@ -160,58 +160,65 @@
 		</div>
 	</header>
 
-	<main class="main-content">
+	<main class="content-container">
 		{#if error}
-			<div class="error-banner">
-				{error}
-				<button onclick={loadSpark} class="retry-btn">Retry</button>
+			<div class="alert alert-error flex justify-between items-center">
+				<span>{error}</span>
+				<button onclick={loadSpark} class="btn btn-error btn-sm">Retry</button>
 			</div>
 		{/if}
 
 		{#if isLoading}
 			<div class="loading">
-				<div class="loader"></div>
+				<div class="spinner"></div>
 				<p>Loading spark details...</p>
 			</div>
 		{:else if spark}
-			<div class="spark-header">
-				<h1>{spark.title}</h1>
-				<p class="spark-date">Created {formatDate(spark.createdAt)}</p>
+			<div class="card spark-header mb-xl">
+				<div class="card-body">
+					<h1 class="page-title">{spark.title}</h1>
+					<p class="page-subtitle">Created {formatDate(spark.createdAt)}</p>
+				</div>
 			</div>
 
 			{#if spark.initialThoughts}
-				<div class="initial-thoughts-section">
-					<h2>Initial Thoughts</h2>
-					<div class="initial-thoughts-content">
-						{spark.initialThoughts}
+				<div class="card initial-thoughts-section mb-xl">
+					<div class="card-header">
+						<h2>Initial Thoughts</h2>
+					</div>
+					<div class="card-body">
+						<div class="initial-thoughts-content">
+							{spark.initialThoughts}
+						</div>
 					</div>
 				</div>
 			{/if}
 
-			<div class="backstory-section">
-				<div class="backstory-header">
+			<div class="card backstory-section">
+				<div class="card-header flex justify-between items-center">
 					<h2>Backstory</h2>
 					<div class="backstory-actions">
 						{#if isEditing}
-							<button onclick={saveBackstory} disabled={isSaving} class="save-btn">
+							<button onclick={saveBackstory} disabled={isSaving} class="btn btn-success btn-sm">
 								{isSaving ? 'Saving...' : 'Save'}
 							</button>
-							<button onclick={toggleEditMode} class="cancel-btn">Cancel</button>
+							<button onclick={toggleEditMode} class="btn btn-neutral btn-sm">Cancel</button>
 						{:else}
-							<button onclick={toggleEditMode} class="edit-btn">Edit</button>
+							<button onclick={toggleEditMode} class="btn btn-primary btn-sm">Edit</button>
 						{/if}
 					</div>
 				</div>
 
-				{#if isEditing}
-					<div class="editor-container">
-						<div class="editor-header">
-							<span class="editor-label">Markdown Editor</span>
-							<span class="editor-hint">Use markdown syntax for formatting</span>
-						</div>
-						<textarea
-							bind:value={backstoryContent}
-							placeholder="Write your backstory in markdown...
+				<div class="card-body">
+					{#if isEditing}
+						<div class="editor-container">
+							<div class="editor-header">
+								<span class="editor-label">Markdown Editor</span>
+								<span class="editor-hint">Use markdown syntax for formatting</span>
+							</div>
+							<textarea
+								bind:value={backstoryContent}
+								placeholder="Write your backstory in markdown...
 
 # Example Heading
 ## Subheading
@@ -220,31 +227,32 @@
 
 - Bullet points
 - More details"
-							class="markdown-editor"
-							rows="20"
-						></textarea>
-					</div>
-				{:else}
-					<div class="preview-container">
-						{#if spark.backstory}
-							<div class="markdown-preview">
-								{@html markdownToHtml(spark.backstory)}
-							</div>
-						{:else}
-							<div class="empty-backstory">
-								<div class="empty-icon">📝</div>
-								<h3>No backstory yet</h3>
-								<p>Click "Edit" to start developing your backstory for this spark.</p>
-							</div>
-						{/if}
-					</div>
-				{/if}
+								class="markdown-editor"
+								rows="20"
+							></textarea>
+						</div>
+					{:else}
+						<div class="preview-container">
+							{#if spark.backstory}
+								<div class="markdown-preview">
+									{@html markdownToHtml(spark.backstory)}
+								</div>
+							{:else}
+								<div class="empty-state">
+									<div class="empty-state-icon">📝</div>
+									<h3 class="empty-state-title">No backstory yet</h3>
+									<p class="empty-state-description">Click "Edit" to start developing your backstory for this spark.</p>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
 			</div>
 		{:else}
-			<div class="not-found">
-				<h2>Spark not found</h2>
-				<p>The spark you're looking for doesn't exist or you don't have access to it.</p>
-				<button onclick={() => goto('/sparks')} class="back-btn">Back to Sparks</button>
+			<div class="empty-state">
+				<h2 class="empty-state-title">Spark not found</h2>
+				<p class="empty-state-description">The spark you're looking for doesn't exist or you don't have access to it.</p>
+				<button onclick={() => goto('/sparks')} class="btn btn-neutral">Back to Sparks</button>
 			</div>
 		{/if}
 	</main>
@@ -253,236 +261,80 @@
 <style>
 	.spark-details-container {
 		min-height: 100vh;
-		background: #f8fafc;
 	}
 
 	.header {
-		background: white;
-		border-bottom: 1px solid #e2e8f0;
-		padding: 1rem 0;
+		background: var(--surface-color);
+		border-bottom: 1px solid var(--border-color);
+		padding: var(--spacing-lg) 0;
 	}
 
 	.header-content {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 0 1rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-	}
-
-	.back-btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		text-decoration: none;
-		display: inline-block;
-	}
-
-	.back-btn:hover {
-		background: #4b5563;
 	}
 
 	.user-info {
-		color: #6b7280;
-		font-size: 0.9rem;
-	}
-
-	.main-content {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 2rem 1rem;
-	}
-
-	.error-banner {
-		background: #fef2f2;
-		border: 1px solid #fecaca;
-		color: #dc2626;
-		padding: 1rem;
-		border-radius: 8px;
-		margin-bottom: 2rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.retry-btn {
-		background: #dc2626;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-	}
-
-	.loading {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 4rem 0;
-		color: #6b7280;
-	}
-
-	.loader {
-		width: 40px;
-		height: 40px;
-		border: 4px solid #e2e8f0;
-		border-top-color: #667eea;
-		border-radius: 50%;
-		animation: spin 1s ease-in-out infinite;
-		margin-bottom: 1rem;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
-	}
-
-	.spark-header {
-		background: white;
-		border-radius: 12px;
-		padding: 2rem;
-		margin-bottom: 2rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	.spark-header h1 {
-		margin: 0 0 0.5rem 0;
-		color: #1f2937;
-		font-size: 2rem;
-		font-weight: 700;
-	}
-
-	.spark-date {
-		color: #6b7280;
-		margin: 0;
-		font-size: 0.95rem;
-	}
-
-	.initial-thoughts-section {
-		background: white;
-		border-radius: 12px;
-		padding: 2rem;
-		margin-bottom: 2rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	.initial-thoughts-section h2 {
-		margin: 0 0 1rem 0;
-		color: #374151;
-		font-size: 1.25rem;
+		color: var(--text-muted);
+		font-size: var(--text-sm);
 	}
 
 	.initial-thoughts-content {
-		color: #4b5563;
+		color: var(--text-tertiary);
 		line-height: 1.6;
 		white-space: pre-line;
 		font-style: italic;
 	}
 
-	.backstory-section {
-		background: white;
-		border-radius: 12px;
-		padding: 2rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	.backstory-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.5rem;
-	}
-
-	.backstory-header h2 {
+	.card-header h2 {
 		margin: 0;
-		color: #374151;
-		font-size: 1.25rem;
+		color: var(--text-secondary);
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
 	}
 
 	.backstory-actions {
 		display: flex;
-		gap: 0.5rem;
-	}
-
-	.edit-btn {
-		background: #667eea;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.875rem;
-	}
-
-	.edit-btn:hover {
-		background: #5a67d8;
-	}
-
-	.save-btn {
-		background: #10b981;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.875rem;
-	}
-
-	.save-btn:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.cancel-btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.875rem;
+		gap: var(--spacing-sm);
 	}
 
 	.editor-container {
-		border: 1px solid #d1d5db;
-		border-radius: 8px;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
 		overflow: hidden;
 	}
 
 	.editor-header {
-		background: #f3f4f6;
-		padding: 0.75rem 1rem;
-		border-bottom: 1px solid #d1d5db;
+		background: var(--surface-hover);
+		padding: var(--spacing-md) var(--spacing-lg);
+		border-bottom: 1px solid var(--border-color);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
 
 	.editor-label {
-		font-weight: 500;
-		color: #374151;
-		font-size: 0.875rem;
+		font-weight: var(--font-weight-medium);
+		color: var(--text-secondary);
+		font-size: var(--text-sm);
 	}
 
 	.editor-hint {
-		color: #6b7280;
-		font-size: 0.8rem;
+		color: var(--text-muted);
+		font-size: var(--text-xs);
 	}
 
 	.markdown-editor {
 		width: 100%;
 		border: none;
-		padding: 1rem;
-		font-family: 'Courier New', monospace;
-		font-size: 0.9rem;
+		padding: var(--spacing-lg);
+		font-family: var(--font-mono);
+		font-size: var(--text-sm);
 		line-height: 1.5;
 		resize: vertical;
 		min-height: 400px;
+		background: var(--surface-color);
 	}
 
 	.markdown-editor:focus {
@@ -494,95 +346,54 @@
 	}
 
 	.markdown-preview {
-		color: #374151;
+		color: var(--text-secondary);
 		line-height: 1.6;
 	}
 
 	.markdown-preview :global(h1) {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: #1f2937;
-		margin: 1.5rem 0 1rem 0;
+		font-size: var(--text-2xl);
+		font-weight: var(--font-weight-bold);
+		color: var(--text-primary);
+		margin: var(--spacing-xl) 0 var(--spacing-lg) 0;
 	}
 
 	.markdown-preview :global(h2) {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: #1f2937;
-		margin: 1.25rem 0 0.75rem 0;
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
+		color: var(--text-primary);
+		margin: var(--spacing-xl) 0 var(--spacing-md) 0;
 	}
 
 	.markdown-preview :global(h3) {
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: #374151;
-		margin: 1rem 0 0.5rem 0;
+		font-size: var(--text-lg);
+		font-weight: var(--font-weight-semibold);
+		color: var(--text-secondary);
+		margin: var(--spacing-lg) 0 var(--spacing-sm) 0;
 	}
 
 	.markdown-preview :global(p) {
-		margin: 0.75rem 0;
+		margin: var(--spacing-md) 0;
 	}
 
 	.markdown-preview :global(strong) {
-		font-weight: 600;
-		color: #1f2937;
+		font-weight: var(--font-weight-semibold);
+		color: var(--text-primary);
 	}
 
 	.markdown-preview :global(em) {
 		font-style: italic;
 	}
 
-	.empty-backstory {
-		text-align: center;
-		padding: 4rem 0;
-		color: #6b7280;
-	}
-
-	.empty-icon {
-		font-size: 3rem;
-		margin-bottom: 1rem;
-	}
-
-	.empty-backstory h3 {
-		color: #374151;
-		margin-bottom: 0.5rem;
-	}
-
-	.not-found {
-		text-align: center;
-		padding: 4rem 0;
-	}
-
-	.not-found h2 {
-		color: #374151;
-		margin-bottom: 1rem;
-	}
-
-	.not-found p {
-		color: #6b7280;
-		margin-bottom: 2rem;
-	}
-
 	@media (max-width: 768px) {
 		.header-content {
 			flex-direction: column;
-			gap: 1rem;
+			gap: var(--spacing-lg);
 		}
 
-		.backstory-header {
+		.card-header {
 			flex-direction: column;
-			gap: 1rem;
-			align-items: flex-start;
-		}
-
-		.spark-header,
-		.initial-thoughts-section,
-		.backstory-section {
-			padding: 1.5rem;
-		}
-
-		.spark-header h1 {
-			font-size: 1.5rem;
+			gap: var(--spacing-lg);
+			align-items: flex-start !important;
 		}
 	}
 </style>

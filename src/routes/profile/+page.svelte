@@ -63,221 +63,123 @@
 
 <AppNav />
 
-<div class="container">
+<div class="content-container">
 	<main class="main">
-		<h1>Profile</h1>
+		<div class="page-header">
+			<h1 class="page-title">Profile</h1>
+		</div>
 
 		{#if loading}
-			<div class="loading">Loading profile...</div>
+			<div class="loading">
+				<div class="spinner"></div>
+				<p>Loading profile...</p>
+			</div>
 		{:else if error && !user}
-			<div class="error">
+			<div class="alert alert-error">
 				<p>{error}</p>
-				<button onclick={() => goto('/login')} class="btn">Go to Login</button>
+				<button onclick={() => goto('/login')} class="btn btn-neutral">Go to Login</button>
 			</div>
 		{:else if user}
-			<div class="profile-section">
-				<h2>User Information</h2>
-				<div class="info-grid">
-					<div class="info-item">
-						<span class="info-label">Email:</span>
-						<span>{user.email}</span>
-					</div>
-					<div class="info-item">
-						<span class="info-label">Name:</span>
-						<span>{user.name || 'Not set'}</span>
-					</div>
-					<div class="info-item">
-						<span class="info-label">Member since:</span>
-						<span>{new Date(user.createdAt).toLocaleDateString()}</span>
+			<div class="card mb-xl">
+				<div class="card-header">
+					<h2>User Information</h2>
+				</div>
+				<div class="card-body">
+					<div class="info-grid">
+						<div class="info-item">
+							<span class="info-label">Email:</span>
+							<span>{user.email}</span>
+						</div>
+						<div class="info-item">
+							<span class="info-label">Name:</span>
+							<span>{user.name || 'Not set'}</span>
+						</div>
+						<div class="info-item">
+							<span class="info-label">Member since:</span>
+							<span>{new Date(user.createdAt).toLocaleDateString()}</span>
+						</div>
 					</div>
 				</div>
 			</div>
 
-			<div class="strategy-section">
-				<h2>Investment Strategy</h2>
-				<form onsubmit={handleUpdateStrategy}>
-					<div class="form-group">
-						<label for="strategy">Strategy:</label>
-						<textarea
-							id="strategy"
-							bind:value={strategyInput}
-							placeholder="Describe your investment strategy..."
-							rows="4"
-							disabled={updating}
-						></textarea>
-					</div>
+			<div class="card">
+				<div class="card-header">
+					<h2>Investment Strategy</h2>
+				</div>
+				<div class="card-body">
+					<form onsubmit={handleUpdateStrategy}>
+						<div class="form-group">
+							<label for="strategy" class="form-label">Strategy:</label>
+							<textarea
+								id="strategy"
+								bind:value={strategyInput}
+								placeholder="Describe your investment strategy..."
+								rows="4"
+								class="form-textarea"
+								disabled={updating}
+							></textarea>
+						</div>
 
-					{#if error}
-						<div class="error-message">{error}</div>
-					{/if}
+						{#if error}
+							<div class="alert alert-error">{error}</div>
+						{/if}
 
-					{#if success}
-						<div class="success-message">{success}</div>
-					{/if}
+						{#if success}
+							<div class="alert alert-success">{success}</div>
+						{/if}
 
-					<button type="submit" class="btn btn-primary" disabled={updating}>
-						{updating ? 'Updating...' : 'Update Strategy'}
-					</button>
-				</form>
+						<button type="submit" class="btn btn-primary" disabled={updating}>
+							{updating ? 'Updating...' : 'Update Strategy'}
+						</button>
+					</form>
+				</div>
 			</div>
 		{/if}
 	</main>
 </div>
 
 <style>
-	.container {
-		max-width: 800px;
-		margin: 0 auto;
-		padding: 2rem;
-		font-family: system-ui, sans-serif;
-		min-height: calc(100vh - 4rem);
-		background: #f8fafc;
-	}
-
 	.main {
-		max-width: 600px;
+		max-width: var(--form-max-width);
 		margin: 0 auto;
-	}
-
-	h1 {
-		font-size: 2rem;
-		font-weight: bold;
-		margin-bottom: 2rem;
-		color: #1f2937;
-	}
-
-	h2 {
-		font-size: 1.5rem;
-		font-weight: 600;
-		margin-bottom: 1rem;
-		color: #374151;
-	}
-
-	.loading {
-		text-align: center;
-		padding: 2rem;
-		color: #6b7280;
-	}
-
-	.error {
-		background: #fef2f2;
-		border: 1px solid #fecaca;
-		border-radius: 0.5rem;
-		padding: 1rem;
-		color: #dc2626;
-		text-align: center;
-	}
-
-	.profile-section,
-	.strategy-section {
-		background: #f9fafb;
-		border-radius: 0.5rem;
-		padding: 1.5rem;
-		margin-bottom: 2rem;
 	}
 
 	.info-grid {
 		display: grid;
-		gap: 1rem;
+		gap: var(--spacing-lg);
 	}
 
 	.info-item {
 		display: grid;
 		grid-template-columns: 120px 1fr;
 		align-items: center;
-		gap: 1rem;
+		gap: var(--spacing-lg);
 	}
 
 	.info-label {
-		font-weight: 600;
-		color: #374151;
+		font-weight: var(--font-weight-semibold);
+		color: var(--text-secondary);
 	}
 
 	.info-item span {
-		color: #6b7280;
+		color: var(--text-muted);
 	}
 
-	.form-group {
-		margin-bottom: 1rem;
+	.card-header h2 {
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
+		margin: 0;
+		color: var(--text-secondary);
 	}
 
-	.form-group label {
-		display: block;
-		font-weight: 600;
-		color: #374151;
-		margin-bottom: 0.5rem;
-	}
+	@media (max-width: 640px) {
+		.info-item {
+			grid-template-columns: 1fr;
+			gap: var(--spacing-sm);
+		}
 
-	textarea {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.375rem;
-		font-family: inherit;
-		font-size: 1rem;
-		resize: vertical;
-	}
-
-	textarea:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-
-	textarea:disabled {
-		background: #f3f4f6;
-		cursor: not-allowed;
-	}
-
-	.btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 0.375rem;
-		cursor: pointer;
-		font-weight: 500;
-		font-size: 1rem;
-	}
-
-	.btn:hover {
-		background: #4b5563;
-	}
-
-	.btn:disabled {
-		background: #9ca3af;
-		cursor: not-allowed;
-	}
-
-	.btn-primary {
-		background: #3b82f6;
-	}
-
-	.btn-primary:hover {
-		background: #2563eb;
-	}
-
-	.btn-primary:disabled {
-		background: #9ca3af;
-	}
-
-	.error-message {
-		background: #fef2f2;
-		border: 1px solid #fecaca;
-		border-radius: 0.375rem;
-		padding: 0.75rem;
-		color: #dc2626;
-		margin-bottom: 1rem;
-		font-size: 0.875rem;
-	}
-
-	.success-message {
-		background: #f0fdf4;
-		border: 1px solid #bbf7d0;
-		border-radius: 0.375rem;
-		padding: 0.75rem;
-		color: #15803d;
-		margin-bottom: 1rem;
-		font-size: 0.875rem;
+		.info-label {
+			font-size: var(--text-sm);
+		}
 	}
 </style>
