@@ -26,6 +26,33 @@
 		description?: string;
 	}
 
+	interface PaginatedArtifactsResponse {
+		data: Artifact[];
+		pagination: {
+			currentPage: number;
+			totalPages: number;
+			totalItems: number;
+			itemsPerPage: number;
+			hasNextPage: boolean;
+			hasPreviousPage: boolean;
+		};
+	}
+
+	type SortBy = 'createdAt' | 'updatedAt' | 'status';
+	type SortOrder = 'asc' | 'desc';
+	type StatusFilter = 'draft' | 'final' | '';
+
+	interface ArtifactFilters {
+		status: StatusFilter;
+		artifactTypeId: string;
+		sparkId: string;
+		contentText: string;
+		createdAfter: string;
+		createdBefore: string;
+		updatedAfter: string;
+		updatedBefore: string;
+	}
+
 	let authState = $state(getAuthState());
 	let artifacts = $state<Artifact[]>([]);
 	let artifactTypes = $state<ArtifactType[]>([]);
@@ -34,8 +61,35 @@
 	let error = $state('');
 	let typesError = $state('');
 
-	// Artifact creation modal
+	// Pagination state
+	let pagination = $state({
+		currentPage: 1,
+		totalPages: 1,
+		totalItems: 0,
+		itemsPerPage: 10,
+		hasNextPage: false,
+		hasPreviousPage: false
+	});
+
+	// Sorting state
+	let sortBy = $state<SortBy>('createdAt');
+	let sortOrder = $state<SortOrder>('desc');
+
+	// Filtering state
+	let filters = $state<ArtifactFilters>({
+		status: '',
+		artifactTypeId: '',
+		sparkId: '',
+		contentText: '',
+		createdAfter: '',
+		createdBefore: '',
+		updatedAfter: '',
+		updatedBefore: ''
+	});
+
+	// UI state
 	let showCreateArtifactModal = $state(false);
+	let showFilters = $state(false);
 
 	onMount(() => {
 		authState = getAuthState();
@@ -52,7 +106,24 @@
 			isLoading = true;
 			error = '';
 
-			const response = await authenticatedFetch('http://localhost:3000/api/artifacts');
+			// Build query parameters
+			const params = new URLSearchParams();
+			params.set('page', pagination.currentPage.toString());
+			params.set('limit', pagination.itemsPerPage.toString());
+			params.set('sortBy', sortBy);
+			params.set('sortOrder', sortOrder);
+
+			// Add filters if they have values
+			if (filters.status) params.set('status', filters.status);
+			if (filters.artifactTypeId) params.set('artifactTypeId', filters.artifactTypeId);
+			if (filters.sparkId) params.set('sparkId', filters.sparkId);
+			if (filters.contentText) params.set('contentText', filters.contentText);
+			if (filters.createdAfter) params.set('createdAfter', filters.createdAfter);
+			if (filters.createdBefore) params.set('createdBefore', filters.createdBefore);
+			if (filters.updatedAfter) params.set('updatedAfter', filters.updatedAfter);
+			if (filters.updatedBefore) params.set('updatedBefore', filters.updatedBefore);
+
+			const response = await authenticatedFetch(`http://localhost:3000/api/artifacts?${params.toString()}`);
 
 			if (!response.ok) {
 				if (response.status === 401) {
@@ -63,7 +134,9 @@
 				throw new Error(`Failed to load artifacts: ${response.status}`);
 			}
 
-			artifacts = await response.json();
+			const result: PaginatedArtifactsResponse = await response.json();
+			artifacts = result.data;
+			pagination = result.pagination;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load artifacts';
 			console.error('Error loading artifacts:', err);
@@ -149,6 +222,74 @@
 	function handleCreateArtifactError(errorMessage: string) {
 		error = errorMessage;
 	}
+
+	// Pagination handlers
+	function goToPage(page: number) {
+		if (page >= 1 && page <= pagination.totalPages && page !== pagination.currentPage) {
+			pagination.currentPage = page;
+			loadArtifacts();
+		}
+	}
+
+	function changePage(delta: number) {
+		goToPage(pagination.currentPage + delta);
+	}
+
+	// Sorting handlers
+	function handleSortChange(newSortBy: SortBy) {
+		if (sortBy === newSortBy) {
+			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortBy = newSortBy;
+			sortOrder = 'desc';
+		}
+		pagination.currentPage = 1;
+		loadArtifacts();
+	}
+
+	// Filter handlers
+	function handleFilterChange() {
+		pagination.currentPage = 1;
+		loadArtifacts();
+	}
+
+	// Debounced search for content text
+	let searchTimeout: ReturnType<typeof setTimeout>;
+	function handleSearchInput() {
+		if (searchTimeout) clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(() => {
+			pagination.currentPage = 1;
+			loadArtifacts();
+		}, 300);
+	}
+
+	function resetFilters() {
+		filters = {
+			status: '',
+			artifactTypeId: '',
+			sparkId: '',
+			contentText: '',
+			createdAfter: '',
+			createdBefore: '',
+			updatedAfter: '',
+			updatedBefore: ''
+		};
+		pagination.currentPage = 1;
+		loadArtifacts();
+	}
+
+	function hasActiveFilters(): boolean {
+		return (
+			filters.status !== '' ||
+			filters.artifactTypeId !== '' ||
+			filters.sparkId !== '' ||
+			filters.contentText !== '' ||
+			filters.createdAfter !== '' ||
+			filters.createdBefore !== '' ||
+			filters.updatedAfter !== '' ||
+			filters.updatedBefore !== ''
+		);
+	}
 </script>
 
 <svelte:head>
@@ -183,91 +324,290 @@
 				<div class="spinner"></div>
 				<p>Loading your artifacts...</p>
 			</div>
-		{:else if artifacts.length === 0}
-			<div class="empty-state">
-				<div class="empty-state-icon">🎨</div>
-				<h2 class="empty-state-title">No artifacts yet</h2>
-				<p class="empty-state-description">
-					Generate AI-powered content from your sparks. Choose any spark and create LinkedIn posts, articles, and more.
-				</p>
-				<div class="empty-state-actions">
-					<button
-						onclick={() => showCreateArtifactModal = true}
-						class="btn btn-primary btn-lg"
-					>
-						🤖 Generate First Artifact
-					</button>
-					<a href="/sparks" class="btn btn-neutral btn-lg">
-						Go to My Sparks
-					</a>
-				</div>
-			</div>
 		{:else}
-			<div class="artifacts-header mb-xl">
-				<div class="artifacts-actions">
+		<!-- Always show actions bar if there are artifacts OR if filters are applied -->
+		{#if artifacts.length > 0 || hasActiveFilters()}
+			<div class="actions-bar mb-xl">
+				<div class="actions-left">
 					<button
-						onclick={() => showCreateArtifactModal = true}
-						class="btn btn-primary"
+						onclick={() => showFilters = !showFilters}
+						class="btn btn-neutral"
 					>
-						🤖 Generate New Artifact
+						{showFilters ? 'Hide Filters' : 'Show Filters'}
 					</button>
+					{#if pagination.totalItems > 0}
+						<span class="results-count">
+							{pagination.totalItems} artifact{pagination.totalItems !== 1 ? 's' : ''}
+						</span>
+					{/if}
 				</div>
+				<button
+					onclick={() => showCreateArtifactModal = true}
+					class="btn btn-primary"
+				>
+					🤖 Generate New Artifact
+				</button>
 			</div>
 
-			<div class="artifacts-list">
-				{#each artifacts as artifact (artifact.id)}
-					<div class="card artifact-item">
-						<div class="card-body artifact-main">
-							<div class="artifact-header">
-								<div class="artifact-info">
-									<div class="artifact-type">
-										{#if isLoadingTypes}
-											<span class="type-badge loading">Loading...</span>
-										{:else}
-											<span class="type-badge">{getArtifactTypeName(artifact.artifactTypeId)}</span>
-										{/if}
-									</div>
-									<div class="artifact-status">
-										<span class="status-badge" class:draft={artifact.status === 'draft'} class:final={artifact.status === 'final'}>
-											{artifact.status}
-										</span>
-									</div>
-								</div>
-								<time class="artifact-date">{formatDate(artifact.createdAt)}</time>
+			{#if showFilters}
+				<div class="card filters-panel mb-xl">
+					<div class="card-header">
+						<h2>Search & Filters</h2>
+					</div>
+					<div class="card-body">
+						<div class="filters-grid">
+							<div class="form-group">
+								<label class="form-label">Search content:</label>
+								<input
+									type="text"
+									bind:value={filters.contentText}
+									oninput={handleSearchInput}
+									placeholder="Search in artifact content..."
+									class="form-input"
+									onkeydown={(e) => e.key === 'Enter' && handleFilterChange()}
+								/>
 							</div>
 
-							{#if artifact.sparkTitle}
-								<div class="spark-reference">
-									<span class="spark-label">From spark:</span>
-									<button onclick={() => handleViewSpark(artifact.sparkId)} class="spark-link">
-						✨ {artifact.sparkTitle}
-									</button>
-								</div>
-							{/if}
-
-							<div class="artifact-content">
-								<p class="content-text">{truncateText(artifact.content.text)}</p>
-								{#if artifact.content.hashtags && artifact.content.hashtags.length > 0}
-									<div class="hashtags">
-										{#each artifact.content.hashtags as hashtag}
-											<span class="hashtag">#{hashtag}</span>
-										{/each}
-									</div>
-								{/if}
-							</div>
-
-							<div class="artifact-actions">
-								<button
-									onclick={() => handleDeleteArtifact(artifact.id)}
-									class="btn btn-error btn-sm"
+							<div class="form-group">
+								<label class="form-label">Status:</label>
+								<select
+									bind:value={filters.status}
+									onchange={handleFilterChange}
+									class="form-input"
 								>
-									Delete
-								</button>
+									<option value="">All statuses</option>
+									<option value="draft">Draft</option>
+									<option value="final">Final</option>
+								</select>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Type:</label>
+								<select
+									bind:value={filters.artifactTypeId}
+									onchange={handleFilterChange}
+									class="form-input"
+									disabled={isLoadingTypes}
+								>
+									<option value="">All types</option>
+									{#each artifactTypes as type}
+										<option value={type.id}>{type.name}</option>
+									{/each}
+								</select>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Sort by:</label>
+								<select
+									bind:value={sortBy}
+									onchange={() => handleSortChange(sortBy)}
+									class="form-input"
+								>
+									<option value="createdAt">Created Date</option>
+									<option value="updatedAt">Updated Date</option>
+									<option value="status">Status</option>
+								</select>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Sort order:</label>
+								<select
+									bind:value={sortOrder}
+									onchange={() => handleSortChange(sortBy)}
+									class="form-input"
+								>
+									<option value="desc">Newest First</option>
+									<option value="asc">Oldest First</option>
+								</select>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Created after:</label>
+								<input
+									type="datetime-local"
+									bind:value={filters.createdAfter}
+									onchange={handleFilterChange}
+									class="form-input"
+								/>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Created before:</label>
+								<input
+									type="datetime-local"
+									bind:value={filters.createdBefore}
+									onchange={handleFilterChange}
+									class="form-input"
+								/>
 							</div>
 						</div>
+
+						<div class="filters-actions">
+							<button onclick={resetFilters} class="btn btn-neutral">
+								Clear All Filters
+							</button>
+						</div>
 					</div>
-				{/each}
-			</div>
+				</div>
+			{/if}
+
+			<!-- Show artifacts if they exist, otherwise show filtered empty state -->
+			{#if artifacts.length > 0}
+				<div class="artifacts-list">
+					{#each artifacts as artifact (artifact.id)}
+						<div class="card artifact-item">
+							<div class="card-body artifact-main">
+								<div class="artifact-header">
+									<div class="artifact-info">
+										<div class="artifact-type">
+											{#if isLoadingTypes}
+												<span class="type-badge loading">Loading...</span>
+											{:else}
+												<span class="type-badge">{getArtifactTypeName(artifact.artifactTypeId)}</span>
+											{/if}
+										</div>
+										<div class="artifact-status">
+											<span class="status-badge" class:draft={artifact.status === 'draft'} class:final={artifact.status === 'final'}>
+												{artifact.status}
+											</span>
+										</div>
+									</div>
+									<time class="artifact-date">{formatDate(artifact.createdAt)}</time>
+								</div>
+
+								{#if artifact.sparkTitle}
+									<div class="spark-reference">
+										<span class="spark-label">From spark:</span>
+										<button onclick={() => handleViewSpark(artifact.sparkId)} class="spark-link">
+							✨ {artifact.sparkTitle}
+										</button>
+									</div>
+								{/if}
+
+								<div class="artifact-content">
+									<p class="content-text">{truncateText(artifact.content.text)}</p>
+									{#if artifact.content.hashtags && artifact.content.hashtags.length > 0}
+										<div class="hashtags">
+											{#each artifact.content.hashtags as hashtag}
+												<span class="hashtag">#{hashtag}</span>
+											{/each}
+										</div>
+									{/if}
+								</div>
+
+								<div class="artifact-actions">
+									<button
+										onclick={() => handleDeleteArtifact(artifact.id)}
+										class="btn btn-error btn-sm"
+									>
+										Delete
+									</button>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<!-- Empty state for filtered results -->
+				<div class="empty-state">
+					<div class="empty-state-icon">🔍</div>
+					<h2 class="empty-state-title">No artifacts found</h2>
+					<p class="empty-state-description">
+						{#if hasActiveFilters()}
+							No artifacts match your current search criteria. Try adjusting your filters or clearing them to see all artifacts.
+						{:else}
+							You don't have any artifacts yet. Generate AI-powered content from your sparks.
+						{/if}
+					</p>
+					<div class="empty-state-actions">
+						{#if hasActiveFilters()}
+							<button onclick={resetFilters} class="btn btn-neutral btn-lg">
+								Clear All Filters
+							</button>
+						{/if}
+						<button
+							onclick={() => showCreateArtifactModal = true}
+							class="btn btn-primary btn-lg"
+						>
+							🤖 Generate New Artifact
+						</button>
+						{#if !hasActiveFilters()}
+							<a href="/sparks" class="btn btn-neutral btn-lg">
+								Go to My Sparks
+							</a>
+						{/if}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Pagination Controls -->
+			{#if pagination.totalPages > 1}
+				<div class="pagination-section mt-xl">
+					<div class="pagination-controls">
+						<button
+							onclick={() => changePage(-1)}
+							disabled={!pagination.hasPreviousPage}
+							class="btn btn-neutral btn-sm"
+						>
+							← Previous
+						</button>
+
+						<div class="pagination-info">
+							<span class="pagination-text">
+								Page {pagination.currentPage} of {pagination.totalPages}
+							</span>
+							<div class="pagination-numbers">
+								{#each Array.from({length: Math.min(5, pagination.totalPages)}, (_, i) => {
+									const startPage = Math.max(1, pagination.currentPage - 2);
+									const endPage = Math.min(pagination.totalPages, startPage + 4);
+									const adjustedStart = Math.max(1, endPage - 4);
+									return adjustedStart + i;
+								}) as pageNum}
+									{#if pageNum <= pagination.totalPages}
+										<button
+											onclick={() => goToPage(pageNum)}
+											class="btn btn-sm pagination-number"
+											class:btn-primary={pageNum === pagination.currentPage}
+											class:btn-neutral={pageNum !== pagination.currentPage}
+										>
+											{pageNum}
+										</button>
+									{/if}
+								{/each}
+							</div>
+						</div>
+
+						<button
+							onclick={() => changePage(1)}
+							disabled={!pagination.hasNextPage}
+							class="btn btn-neutral btn-sm"
+						>
+							Next →
+						</button>
+					</div>
+				</div>
+			{/if}
+			{:else}
+				<!-- Original empty state for users with no artifacts and no filters -->
+				<div class="empty-state">
+					<div class="empty-state-icon">🎨</div>
+					<h2 class="empty-state-title">No artifacts yet</h2>
+					<p class="empty-state-description">
+						Generate AI-powered content from your sparks. Choose any spark and create LinkedIn posts, articles, and more.
+					</p>
+					<div class="empty-state-actions">
+						<button
+							onclick={() => showCreateArtifactModal = true}
+							class="btn btn-primary btn-lg"
+						>
+							🤖 Generate First Artifact
+						</button>
+						<a href="/sparks" class="btn btn-neutral btn-lg">
+							Go to My Sparks
+						</a>
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</main>
 </div>
@@ -281,19 +621,94 @@
 />
 
 <style>
-	.artifacts-header {
+	/* Actions Bar */
+	.actions-bar {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		margin-bottom: var(--spacing-2xl);
 		flex-wrap: wrap;
 		gap: var(--spacing-lg);
 	}
 
-
-	.artifacts-actions {
+	.actions-left {
 		display: flex;
 		align-items: center;
+		gap: var(--spacing-lg);
+		flex-wrap: wrap;
 	}
+
+	.results-count {
+		color: var(--text-muted);
+		font-size: var(--text-sm);
+		font-weight: var(--font-weight-medium);
+	}
+
+	/* Filters Panel */
+	.filters-panel .card-header h2 {
+		margin: 0;
+		color: var(--text-primary);
+		font-size: var(--text-lg);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.filters-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: var(--spacing-lg);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.form-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+
+	.filters-actions {
+		display: flex;
+		justify-content: flex-end;
+		padding-top: var(--spacing-md);
+		border-top: 1px solid var(--border-color);
+	}
+
+	/* Pagination */
+	.pagination-section {
+		border-top: 1px solid var(--border-color);
+		padding-top: var(--spacing-xl);
+	}
+
+	.pagination-controls {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: var(--spacing-lg);
+		flex-wrap: wrap;
+	}
+
+	.pagination-info {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-sm);
+	}
+
+	.pagination-text {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		white-space: nowrap;
+	}
+
+	.pagination-numbers {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+	}
+
+	.pagination-number {
+		min-width: 40px;
+	}
+
 
 	.artifacts-list {
 		display: flex;
@@ -451,13 +866,31 @@
 	}
 
 	@media (max-width: 768px) {
-		.artifacts-header {
+		.actions-bar {
+			justify-content: stretch;
 			flex-direction: column;
-			align-items: flex-start;
+			align-items: stretch;
 		}
 
-		.artifacts-actions .btn {
-			width: 100%;
+		.actions-left {
+			justify-content: space-between;
+		}
+
+		.filters-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.filters-actions {
+			justify-content: center;
+		}
+
+		.pagination-controls {
+			flex-direction: column;
+			gap: var(--spacing-md);
+		}
+
+		.pagination-numbers {
+			justify-content: center;
 		}
 
 		.artifact-header {
