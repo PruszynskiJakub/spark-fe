@@ -11,6 +11,7 @@
 		backstory?: string;
 		userId: string;
 		createdAt: string;
+		artifactsCount: number;
 	}
 
 	interface PaginatedSparkResponse {
@@ -420,6 +421,11 @@
 										<span class="indicator no-backstory">📝 No Backstory</span>
 									{/if}
 								</div>
+								<div class="artifacts-count">
+									<span class="indicator artifacts-indicator">
+										🧩 {spark.artifactsCount} artifact{spark.artifactsCount !== 1 ? 's' : ''}
+									</span>
+								</div>
 							</div>
 
 							<div class="spark-actions">
@@ -629,6 +635,11 @@
 	.indicator.no-backstory {
 		background: var(--warning-bg);
 		color: #92400e;
+	}
+
+	.indicator.artifacts-indicator {
+		background: var(--info-bg);
+		color: #1e40af;
 	}
 
 	.spark-actions {
