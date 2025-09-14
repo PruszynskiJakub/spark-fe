@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { getAuthState, clearAuth, authenticatedFetch } from '$lib/auth';
 	import AppNav from '$lib/components/AppNav.svelte';
+	import CreateArtifactModal from '$lib/components/CreateArtifactModal.svelte';
 
 	interface Spark {
 		id: string;
@@ -24,6 +25,10 @@
 	// Editor state
 	let isEditing = $state(false);
 	let backstoryContent = $state('');
+
+	// Artifact creation
+	let showCreateArtifactModal = $state(false);
+	let artifactError = $state('');
 
 	$effect(() => {
 		// Set default view mode based on backstory content
@@ -140,6 +145,19 @@
 			.replace(/<p><\/p>/gim, '')
 			.replace(/<p>(<h[1-6]>.*<\/h[1-6]>)<\/p>/gim, '$1');
 	}
+
+	function handleArtifactSuccess(artifact: any) {
+		// Navigate to artifacts page to see the created artifact
+		goto('/artifacts');
+	}
+
+	function handleArtifactError(errorMessage: string) {
+		artifactError = errorMessage;
+	}
+
+	function clearArtifactError() {
+		artifactError = '';
+	}
 </script>
 
 <svelte:head>
@@ -168,6 +186,13 @@
 			</div>
 		{/if}
 
+		{#if artifactError}
+			<div class="alert alert-error flex justify-between items-center">
+				<span>Artifact: {artifactError}</span>
+				<button onclick={clearArtifactError} class="btn btn-error btn-sm">Dismiss</button>
+			</div>
+		{/if}
+
 		{#if isLoading}
 			<div class="loading">
 				<div class="spinner"></div>
@@ -176,8 +201,20 @@
 		{:else if spark}
 			<div class="card spark-header mb-xl">
 				<div class="card-body">
-					<h1 class="page-title">{spark.title}</h1>
-					<p class="page-subtitle">Created {formatDate(spark.createdAt)}</p>
+					<div class="spark-header-content">
+						<div class="spark-title-section">
+							<h1 class="page-title">{spark.title}</h1>
+							<p class="page-subtitle">Created {formatDate(spark.createdAt)}</p>
+						</div>
+						<div class="spark-actions">
+							<button
+								onclick={() => showCreateArtifactModal = true}
+								class="btn btn-success"
+							>
+								🤖 Generate Artifact
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -258,6 +295,17 @@
 	</main>
 </div>
 
+<!-- Create Artifact Modal -->
+{#if spark}
+	<CreateArtifactModal
+		isOpen={showCreateArtifactModal}
+		sparkId={spark.id}
+		onClose={() => showCreateArtifactModal = false}
+		onSuccess={handleArtifactSuccess}
+		onError={handleArtifactError}
+	/>
+{/if}
+
 <style>
 	.spark-details-container {
 		min-height: 100vh;
@@ -278,6 +326,21 @@
 	.user-info {
 		color: var(--text-muted);
 		font-size: var(--text-sm);
+	}
+
+	.spark-header-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: var(--spacing-lg);
+	}
+
+	.spark-title-section {
+		flex: 1;
+	}
+
+	.spark-actions {
+		flex-shrink: 0;
 	}
 
 	.initial-thoughts-content {
@@ -394,6 +457,19 @@
 			flex-direction: column;
 			gap: var(--spacing-lg);
 			align-items: flex-start !important;
+		}
+
+		.spark-header-content {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.spark-actions {
+			align-self: stretch;
+		}
+
+		.spark-actions .btn {
+			width: 100%;
 		}
 	}
 </style>

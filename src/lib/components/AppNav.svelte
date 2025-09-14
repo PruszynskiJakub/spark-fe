@@ -35,6 +35,7 @@
 			<a href="/sparks" class="logo">✨ Spark</a>
 			<nav class="nav-links desktop-nav">
 				<a href="/sparks" class="nav-link" class:active={isCurrentPage('/sparks')}>Sparks</a>
+				<a href="/artifacts" class="nav-link" class:active={isCurrentPage('/artifacts')}>Artifacts</a>
 				<a href="/profile" class="nav-link" class:active={isCurrentPage('/profile')}>Profile</a>
 			</nav>
 		</div>
@@ -70,6 +71,13 @@
 					class:active={isCurrentPage('/sparks')}
 				>
 					Sparks
+				</button>
+				<button
+					onclick={() => handleNavClick('/artifacts')}
+					class="mobile-nav-link"
+					class:active={isCurrentPage('/artifacts')}
+				>
+					Artifacts
 				</button>
 				<button
 					onclick={() => handleNavClick('/profile')}
