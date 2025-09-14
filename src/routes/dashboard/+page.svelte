@@ -98,13 +98,13 @@
 				<div class="stats-card">
 					<div class="stats-content">
 						<div class="stats-number">{userStats.thisWeekSparks}</div>
-						<div class="stats-label">This Week</div>
+						<div class="stats-label">Sparks This Week</div>
 					</div>
 				</div>
 				<div class="stats-card">
 					<div class="stats-content">
-						<div class="stats-number">0</div>
-						<div class="stats-label">Artifacts</div>
+						<div class="stats-number">{userStats.totalArtifacts}</div>
+						<div class="stats-label">Total Artifacts</div>
 					</div>
 				</div>
 			</div>

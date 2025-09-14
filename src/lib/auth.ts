@@ -128,6 +128,7 @@ export async function updateUserStrategy(strategy: string): Promise<User> {
 export interface UserStatsResponse {
 	totalSparks: number;
 	thisWeekSparks: number;
+	totalArtifacts: number;
 }
 
 // Get user stats

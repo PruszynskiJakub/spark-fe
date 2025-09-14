@@ -34,8 +34,8 @@
 
 			console.log('Login successful:', { user: data.user });
 
-			// Redirect to sparks page on success
-			window.location.href = '/sparks';
+			// Redirect to dashboard on success
+			window.location.href = '/dashboard';
 		} catch (error) {
 			console.error('Login failed:', error);
 			errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
