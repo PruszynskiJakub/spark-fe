@@ -6,7 +6,7 @@
 	onMount(() => {
 		const authState = getAuthState();
 		if (authState.isAuthenticated) {
-			goto('/sparks');
+			goto('/dashboard');
 		}
 	});
 </script>

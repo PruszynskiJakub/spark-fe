@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getAuthState, clearAuth, authenticatedFetch, getUserStats, type UserStatsResponse } from '$lib/auth';
+	import { getAuthState, clearAuth, authenticatedFetch } from '$lib/auth';
 	import { goto } from '$app/navigation';
 	import AppNav from '$lib/components/AppNav.svelte';
 
@@ -42,11 +42,8 @@
 	let authState = $state(getAuthState());
 	let sparks = $state<Spark[]>([]);
 	let pagination = $state<PaginatedSparkResponse['pagination'] | null>(null);
-	let userStats = $state<UserStatsResponse | null>(null);
 	let isLoading = $state(true);
-	let isLoadingStats = $state(true);
 	let error = $state('');
-	let statsError = $state('');
 	let showCreateForm = $state(false);
 
 	// Filters and search
@@ -73,7 +70,6 @@
 			return;
 		}
 		loadSparks();
-		loadUserStats();
 	});
 
 	async function loadSparks() {
@@ -117,19 +113,6 @@
 		}
 	}
 
-	async function loadUserStats() {
-		try {
-			isLoadingStats = true;
-			statsError = '';
-			userStats = await getUserStats();
-		} catch (err) {
-			statsError = err instanceof Error ? err.message : 'Failed to load user stats';
-			console.error('Error loading user stats:', err);
-		} finally {
-			isLoadingStats = false;
-		}
-	}
-
 	async function createSpark() {
 		if (!newSpark.title.trim()) {
 			return;
@@ -150,9 +133,8 @@
 				throw new Error(`Failed to create spark: ${response.status}`);
 			}
 
-			// Refresh the spark list and stats after creating
+			// Refresh the spark list after creating
 			await loadSparks();
-			loadUserStats();
 
 			// Reset form
 			newSpark = { title: '', initialThoughts: '' };
@@ -246,46 +228,6 @@
 	</header>
 
 	<main class="main-content">
-		<!-- User Stats Cards -->
-		{#if statsError}
-			<div class="alert alert-error flex justify-between items-center mb-lg">
-				<span>Stats: {statsError}</span>
-				<button onclick={loadUserStats} class="btn btn-error btn-sm">Retry</button>
-			</div>
-		{/if}
-
-		{#if isLoadingStats}
-			<div class="stats-container loading mb-xl">
-				<div class="stats-card">
-					<div class="stats-skeleton">
-						<div class="stats-number skeleton"></div>
-						<div class="stats-label skeleton"></div>
-					</div>
-				</div>
-				<div class="stats-card">
-					<div class="stats-skeleton">
-						<div class="stats-number skeleton"></div>
-						<div class="stats-label skeleton"></div>
-					</div>
-				</div>
-			</div>
-		{:else if userStats}
-			<div class="stats-container mb-xl">
-				<div class="stats-card">
-					<div class="stats-content">
-						<div class="stats-number">{userStats.totalSparks}</div>
-						<div class="stats-label">Total Sparks</div>
-					</div>
-				</div>
-				<div class="stats-card">
-					<div class="stats-content">
-						<div class="stats-number">{userStats.thisWeekSparks}</div>
-						<div class="stats-label">This Week</div>
-					</div>
-				</div>
-			</div>
-		{/if}
-
 		{#if error}
 			<div class="alert alert-error flex justify-between items-center">
 				<span>{error}</span>
@@ -523,80 +465,6 @@
 </div>
 
 <style>
-	/* Stats Cards */
-	.stats-container {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: var(--spacing-lg);
-		margin-bottom: var(--spacing-xl);
-	}
-
-	.stats-card {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: var(--border-radius-lg);
-		padding: var(--spacing-xl);
-		transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
-	}
-
-	.stats-card:hover {
-		border-color: var(--primary-color);
-		box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-	}
-
-	.stats-content {
-		text-align: center;
-	}
-
-	.stats-number {
-		font-size: 2.5rem;
-		font-weight: var(--font-weight-bold);
-		color: var(--primary-color);
-		line-height: 1;
-		margin-bottom: var(--spacing-sm);
-	}
-
-	.stats-label {
-		font-size: var(--text-sm);
-		color: var(--text-muted);
-		font-weight: var(--font-weight-medium);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	/* Loading skeleton */
-	.stats-skeleton {
-		text-align: center;
-	}
-
-	.skeleton {
-		background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
-		background-size: 200% 100%;
-		animation: skeleton-loading 1.5s infinite;
-		border-radius: var(--border-radius-md);
-	}
-
-	.stats-number.skeleton {
-		height: 2.5rem;
-		width: 4rem;
-		margin: 0 auto var(--spacing-sm);
-	}
-
-	.stats-label.skeleton {
-		height: 1rem;
-		width: 5rem;
-		margin: 0 auto;
-	}
-
-	@keyframes skeleton-loading {
-		0% {
-			background-position: 200% 0;
-		}
-		100% {
-			background-position: -200% 0;
-		}
-	}
-
 	.actions-bar {
 		display: flex;
 		justify-content: space-between;
@@ -768,19 +636,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.stats-container {
-			grid-template-columns: 1fr;
-			gap: var(--spacing-md);
-		}
-
-		.stats-card {
-			padding: var(--spacing-lg);
-		}
-
-		.stats-number {
-			font-size: 2rem;
-		}
-
 		.spark-info {
 			flex-direction: column;
 			gap: var(--spacing-sm);

@@ -32,8 +32,9 @@
 <header class="header">
 	<div class="header-content">
 		<div class="nav-left">
-			<a href="/sparks" class="logo">✨ Spark</a>
+			<a href="/dashboard" class="logo">✨ Spark</a>
 			<nav class="nav-links desktop-nav">
+				<a href="/dashboard" class="nav-link" class:active={isCurrentPage('/dashboard')}>Dashboard</a>
 				<a href="/sparks" class="nav-link" class:active={isCurrentPage('/sparks')}>Sparks</a>
 				<a href="/artifacts" class="nav-link" class:active={isCurrentPage('/artifacts')}>Artifacts</a>
 				<a href="/profile" class="nav-link" class:active={isCurrentPage('/profile')}>Profile</a>
@@ -65,6 +66,13 @@
 	{#if isMobileMenuOpen}
 		<div class="mobile-menu" class:open={isMobileMenuOpen}>
 			<nav class="mobile-nav">
+				<button
+					onclick={() => handleNavClick('/dashboard')}
+					class="mobile-nav-link"
+					class:active={isCurrentPage('/dashboard')}
+				>
+					Dashboard
+				</button>
 				<button
 					onclick={() => handleNavClick('/sparks')}
 					class="mobile-nav-link"
