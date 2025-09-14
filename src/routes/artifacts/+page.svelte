@@ -204,10 +204,6 @@
 			</div>
 		{:else}
 			<div class="artifacts-header mb-xl">
-				<div class="artifacts-count">
-					<span class="count-number">{artifacts.length}</span>
-					<span class="count-label">artifact{artifacts.length !== 1 ? 's' : ''}</span>
-				</div>
 				<div class="artifacts-actions">
 					<button
 						onclick={() => showCreateArtifactModal = true}
@@ -293,23 +289,6 @@
 		gap: var(--spacing-lg);
 	}
 
-	.artifacts-count {
-		display: flex;
-		align-items: baseline;
-		gap: var(--spacing-sm);
-	}
-
-	.count-number {
-		font-size: var(--text-3xl);
-		font-weight: var(--font-weight-bold);
-		color: var(--primary-color);
-	}
-
-	.count-label {
-		color: var(--text-muted);
-		font-size: var(--text-lg);
-		font-weight: var(--font-weight-medium);
-	}
 
 	.artifacts-actions {
 		display: flex;
