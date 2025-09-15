@@ -247,7 +247,7 @@
 					{:else if recentArtifacts && recentArtifacts.length > 0}
 						<div class="recent-items">
 							{#each recentArtifacts as artifact}
-								<div class="recent-item" onclick={() => goto('/artifacts')}>
+								<div class="recent-item" onclick={() => goto(`/artifacts/${artifact.id}`)}>
 									<h3 class="recent-title">{artifact.sparkTitle || `Artifact from Spark ${artifact.sparkId.substring(0, 8)}`}</h3>
 									<p class="recent-content">{artifact.content?.text?.substring(0, 120) || ''}...</p>
 									<div class="recent-meta">
