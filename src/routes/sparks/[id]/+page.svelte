@@ -67,7 +67,7 @@
 			}
 
 			spark = await response.json();
-			backstoryContent = spark.backstory || '';
+			backstoryContent = spark?.backstory || '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load spark';
 			console.error('Error loading spark:', err);

@@ -174,3 +174,55 @@ export async function testSparksEndpoints(): Promise<{ getSparks: any[], createS
 
 	return { getSparks: sparks, createSpark: newSpark };
 }
+
+// Recent sparks interface
+export interface RecentSpark {
+	id: string;
+	title: string;
+	content: string;
+	tags: string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+// Recent artifacts interface
+export interface RecentArtifact {
+	id: string;
+	title: string;
+	content: string;
+	type: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+// Get recent sparks
+export async function getRecentSparks(limit: number = 3): Promise<RecentSpark[]> {
+	const response = await authenticatedFetch(`http://localhost:3000/api/sparks/recent?limit=${limit}`);
+
+	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuth();
+			throw new Error('Authentication expired');
+		}
+		throw new Error(`Failed to fetch recent sparks: ${response.status}`);
+	}
+
+	const result = await response.json();
+	return result.data || [];
+}
+
+// Get recent artifacts
+export async function getRecentArtifacts(limit: number = 3): Promise<RecentArtifact[]> {
+	const response = await authenticatedFetch(`http://localhost:3000/api/artifacts/recent?limit=${limit}`);
+
+	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuth();
+			throw new Error('Authentication expired');
+		}
+		throw new Error(`Failed to fetch recent artifacts: ${response.status}`);
+	}
+
+	const result = await response.json();
+	return result.data || [];
+}
