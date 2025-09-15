@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { getAuthState, clearAuth, authenticatedFetch } from '$lib/auth';
+	import { getAuthState, clearAuth, authenticatedFetch, deleteArtifact } from '$lib/auth';
 	import AppNav from '$lib/components/AppNav.svelte';
 
 	interface Artifact {
@@ -39,6 +39,10 @@
 	let editedContent = $state('');
 	let editedHashtags = $state('');
 	let editedStatus = $state<'draft' | 'final'>('draft');
+
+	// Deletion state
+	let showDeleteConfirm = $state(false);
+	let isDeleting = $state(false);
 
 	onMount(() => {
 		authState = getAuthState();
@@ -149,27 +153,31 @@
 		editedStatus = 'draft';
 	}
 
-	async function deleteArtifact() {
+	function confirmDelete() {
+		showDeleteConfirm = true;
+	}
+
+	function cancelDelete() {
+		showDeleteConfirm = false;
+	}
+
+	async function handleDeleteArtifact() {
 		if (!artifact) return;
 
-		if (!confirm('Are you sure you want to delete this artifact? This action cannot be undone.')) {
-			return;
-		}
-
 		try {
-			const response = await authenticatedFetch(`http://localhost:3000/api/artifacts/${artifact.id}`, {
-				method: 'DELETE'
-			});
+			isDeleting = true;
+			error = '';
 
-			if (!response.ok) {
-				throw new Error(`Failed to delete artifact: ${response.status}`);
-			}
+			await deleteArtifact(artifact.id);
 
-			// Redirect to artifacts list after successful deletion
+			// Navigate back to artifacts list after successful deletion
 			goto('/artifacts');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete artifact';
 			console.error('Error deleting artifact:', err);
+			showDeleteConfirm = false;
+		} finally {
+			isDeleting = false;
 		}
 	}
 
@@ -258,7 +266,7 @@
 								<button onclick={copyToClipboard} class="btn btn-neutral">
 									📋 Copy
 								</button>
-								<button onclick={deleteArtifact} class="btn btn-error">
+								<button onclick={confirmDelete} class="btn btn-error">
 									🗑️ Delete
 								</button>
 							{/if}
@@ -351,6 +359,33 @@
 		{/if}
 	</main>
 </div>
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteConfirm}
+	<div class="modal-overlay" onclick={cancelDelete}>
+		<div class="modal-content card" onclick={(e) => e.stopPropagation()}>
+			<div class="card-header">
+				<h2>Delete Artifact</h2>
+			</div>
+			<div class="card-body">
+				<p>Are you sure you want to delete this artifact? This action cannot be undone.</p>
+				<p class="warning-text">All content associated with this artifact will be permanently removed.</p>
+			</div>
+			<div class="card-footer">
+				<div class="modal-actions">
+					<button onclick={cancelDelete} class="btn btn-neutral">Cancel</button>
+					<button
+						onclick={handleDeleteArtifact}
+						disabled={isDeleting}
+						class="btn btn-error"
+					>
+						{isDeleting ? 'Deleting...' : 'Delete Artifact'}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.artifact-details-container {
@@ -537,6 +572,60 @@
 		color: var(--text-muted);
 	}
 
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: var(--spacing-lg);
+	}
+
+	.modal-content {
+		width: 100%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		animation: modalSlideIn 0.3s ease-out;
+	}
+
+	@keyframes modalSlideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.modal-content .card-header h2 {
+		margin: 0;
+		color: var(--text-primary);
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: var(--spacing-lg);
+		justify-content: flex-end;
+	}
+
+	.warning-text {
+		color: var(--warning-color);
+		font-weight: var(--font-weight-medium);
+		font-size: var(--text-sm);
+		margin-top: var(--spacing-sm);
+	}
+
 	@media (max-width: 768px) {
 		.header-content {
 			flex-direction: column;
@@ -581,6 +670,14 @@
 
 		.editing-actions .btn {
 			flex: 1;
+		}
+
+		.modal-actions {
+			flex-direction: column;
+		}
+
+		.modal-overlay {
+			padding: var(--spacing-md);
 		}
 	}
 </style>

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { getAuthState, clearAuth, authenticatedFetch } from '$lib/auth';
+	import { getAuthState, clearAuth, authenticatedFetch, deleteSpark } from '$lib/auth';
 	import AppNav from '$lib/components/AppNav.svelte';
 	import CreateArtifactModal from '$lib/components/CreateArtifactModal.svelte';
 
@@ -29,6 +29,10 @@
 	// Artifact creation
 	let showCreateArtifactModal = $state(false);
 	let artifactError = $state('');
+
+	// Deletion state
+	let showDeleteConfirm = $state(false);
+	let isDeleting = $state(false);
 
 	$effect(() => {
 		// Set default view mode based on backstory content
@@ -158,6 +162,34 @@
 	function clearArtifactError() {
 		artifactError = '';
 	}
+
+	function confirmDelete() {
+		showDeleteConfirm = true;
+	}
+
+	function cancelDelete() {
+		showDeleteConfirm = false;
+	}
+
+	async function handleDeleteSpark() {
+		if (!spark) return;
+
+		try {
+			isDeleting = true;
+			error = '';
+
+			await deleteSpark(spark.id);
+
+			// Navigate back to sparks list after successful deletion
+			goto('/sparks');
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to delete spark';
+			console.error('Error deleting spark:', err);
+			showDeleteConfirm = false;
+		} finally {
+			isDeleting = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -212,6 +244,9 @@
 								class="btn btn-success"
 							>
 								🤖 Generate Artifact
+							</button>
+							<button onclick={confirmDelete} class="btn btn-error">
+								Delete Spark
 							</button>
 						</div>
 					</div>
@@ -306,6 +341,33 @@
 	/>
 {/if}
 
+<!-- Delete Confirmation Modal -->
+{#if showDeleteConfirm}
+	<div class="modal-overlay" onclick={cancelDelete}>
+		<div class="modal-content card" onclick={(e) => e.stopPropagation()}>
+			<div class="card-header">
+				<h2>Delete Spark</h2>
+			</div>
+			<div class="card-body">
+				<p>Are you sure you want to delete this spark? This action cannot be undone.</p>
+				<p class="warning-text">All artifacts associated with this spark will also be deleted.</p>
+			</div>
+			<div class="card-footer">
+				<div class="modal-actions">
+					<button onclick={cancelDelete} class="btn btn-neutral">Cancel</button>
+					<button
+						onclick={handleDeleteSpark}
+						disabled={isDeleting}
+						class="btn btn-error"
+					>
+						{isDeleting ? 'Deleting...' : 'Delete Spark'}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.spark-details-container {
 		min-height: 100vh;
@@ -341,6 +403,63 @@
 
 	.spark-actions {
 		flex-shrink: 0;
+		display: flex;
+		gap: var(--spacing-lg);
+		align-items: center;
+	}
+
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: var(--spacing-lg);
+	}
+
+	.modal-content {
+		width: 100%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		animation: modalSlideIn 0.3s ease-out;
+	}
+
+	@keyframes modalSlideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.modal-content .card-header h2 {
+		margin: 0;
+		color: var(--text-primary);
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: var(--spacing-lg);
+		justify-content: flex-end;
+	}
+
+	.warning-text {
+		color: var(--warning-color);
+		font-weight: var(--font-weight-medium);
+		font-size: var(--text-sm);
+		margin-top: var(--spacing-sm);
 	}
 
 	.initial-thoughts-content {
@@ -470,6 +589,14 @@
 
 		.spark-actions .btn {
 			width: 100%;
+		}
+
+		.modal-actions {
+			flex-direction: column;
+		}
+
+		.modal-overlay {
+			padding: var(--spacing-md);
 		}
 	}
 </style>

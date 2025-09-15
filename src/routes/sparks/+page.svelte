@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getAuthState, clearAuth, authenticatedFetch } from '$lib/auth';
+	import { getAuthState, clearAuth, authenticatedFetch, deleteSpark } from '$lib/auth';
 	import { goto } from '$app/navigation';
 	import AppNav from '$lib/components/AppNav.svelte';
 
@@ -57,6 +57,10 @@
 	let searchTitle = $state('');
 	let searchInitialThoughts = $state('');
 	let showFilters = $state(false);
+
+	// Deletion state
+	let deletingSparkId = $state<string | null>(null);
+	let showDeleteConfirm = $state<string | null>(null);
 
 	// New spark form
 	let newSpark = $state({
@@ -195,6 +199,34 @@
 
 	function handleDevelop(spark: Spark) {
 		goto(`/sparks/${spark.id}`);
+	}
+
+	function confirmDelete(sparkId: string) {
+		showDeleteConfirm = sparkId;
+	}
+
+	function cancelDelete() {
+		showDeleteConfirm = null;
+	}
+
+	async function handleDeleteSpark(sparkId: string) {
+		try {
+			deletingSparkId = sparkId;
+			error = '';
+
+			await deleteSpark(sparkId);
+
+			// Refresh the spark list after deletion
+			await loadSparks();
+
+			// Close confirmation dialog
+			showDeleteConfirm = null;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to delete spark';
+			console.error('Error deleting spark:', err);
+		} finally {
+			deletingSparkId = null;
+		}
 	}
 
 	function truncateInitialThoughts(text: string, maxLines: number = 2): string {
@@ -432,6 +464,9 @@
 								<button onclick={() => handleDevelop(spark)} class="btn btn-primary">
 									Develop
 								</button>
+								<button onclick={() => confirmDelete(spark.id)} class="btn btn-error btn-sm">
+									Delete
+								</button>
 							</div>
 						</div>
 					</div>
@@ -469,6 +504,33 @@
 		{/if}
 	</main>
 </div>
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteConfirm}
+	<div class="modal-overlay" onclick={cancelDelete}>
+		<div class="modal-content card" onclick={(e) => e.stopPropagation()}>
+			<div class="card-header">
+				<h2>Delete Spark</h2>
+			</div>
+			<div class="card-body">
+				<p>Are you sure you want to delete this spark? This action cannot be undone.</p>
+				<p class="warning-text">All artifacts associated with this spark will also be deleted.</p>
+			</div>
+			<div class="card-footer">
+				<div class="modal-actions">
+					<button onclick={cancelDelete} class="btn btn-neutral">Cancel</button>
+					<button
+						onclick={() => handleDeleteSpark(showDeleteConfirm!)}
+						disabled={deletingSparkId === showDeleteConfirm}
+						class="btn btn-error"
+					>
+						{deletingSparkId === showDeleteConfirm ? 'Deleting...' : 'Delete Spark'}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.actions-bar {
@@ -644,6 +706,63 @@
 
 	.spark-actions {
 		flex-shrink: 0;
+		display: flex;
+		gap: var(--spacing-sm);
+		align-items: center;
+	}
+
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: var(--spacing-lg);
+	}
+
+	.modal-content {
+		width: 100%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		animation: modalSlideIn 0.3s ease-out;
+	}
+
+	@keyframes modalSlideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.modal-content .card-header h2 {
+		margin: 0;
+		color: var(--text-primary);
+		font-size: var(--text-xl);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: var(--spacing-lg);
+		justify-content: flex-end;
+	}
+
+	.warning-text {
+		color: var(--warning-color);
+		font-weight: var(--font-weight-medium);
+		font-size: var(--text-sm);
+		margin-top: var(--spacing-sm);
 	}
 
 	@media (max-width: 768px) {
@@ -684,6 +803,19 @@
 
 		.pagination-info {
 			order: -1;
+		}
+
+		.spark-actions {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.modal-actions {
+			flex-direction: column;
+		}
+
+		.modal-overlay {
+			padding: var(--spacing-md);
 		}
 	}
 </style>

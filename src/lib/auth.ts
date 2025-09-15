@@ -232,3 +232,45 @@ export async function getRecentArtifacts(limit: number = 3): Promise<RecentArtif
 	const result = await response.json();
 	return result.data || [];
 }
+
+// Delete a spark
+export async function deleteSpark(sparkId: string): Promise<void> {
+	const response = await authenticatedFetch(`http://localhost:3000/api/sparks/${sparkId}`, {
+		method: 'DELETE'
+	});
+
+	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuth();
+			throw new Error('Authentication expired');
+		}
+		if (response.status === 404) {
+			throw new Error('Spark not found');
+		}
+		if (response.status === 403) {
+			throw new Error('You do not have permission to delete this spark');
+		}
+		throw new Error(`Failed to delete spark: ${response.status}`);
+	}
+}
+
+// Delete an artifact
+export async function deleteArtifact(artifactId: string): Promise<void> {
+	const response = await authenticatedFetch(`http://localhost:3000/api/artifacts/${artifactId}`, {
+		method: 'DELETE'
+	});
+
+	if (!response.ok) {
+		if (response.status === 401) {
+			clearAuth();
+			throw new Error('Authentication expired');
+		}
+		if (response.status === 404) {
+			throw new Error('Artifact not found');
+		}
+		if (response.status === 403) {
+			throw new Error('You do not have permission to delete this artifact');
+		}
+		throw new Error(`Failed to delete artifact: ${response.status}`);
+	}
+}
