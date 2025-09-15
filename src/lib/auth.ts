@@ -188,11 +188,17 @@ export interface RecentSpark {
 // Recent artifacts interface
 export interface RecentArtifact {
 	id: string;
-	title: string;
-	content: string;
-	type: string;
+	sparkId: string;
+	artifactTypeId: string;
+	status: 'draft' | 'final';
+	content: {
+		text: string;
+		hashtags?: string[];
+	};
 	createdAt: string;
 	updatedAt: string;
+	sparkTitle?: string;
+	typeName?: string;
 }
 
 // Get recent sparks

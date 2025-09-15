@@ -46,6 +46,7 @@
 			]);
 			recentSparks = sparksData || [];
 			recentArtifacts = artifactsData || [];
+			console.log('Recent data loaded:', { sparksCount: recentSparks.length, artifactsCount: recentArtifacts.length, artifactsData });
 		} catch (err) {
 			recentError = err instanceof Error ? err.message : 'Failed to load recent data';
 			console.error('Error loading recent data:', err);
@@ -196,7 +197,7 @@
                     {:else if recentSparks && recentSparks.length > 0}
 						<div class="recent-items">
 							{#each recentSparks as spark}
-								<div class="recent-item">
+								<div class="recent-item" onclick={() => goto(`/sparks/${spark.id}`)}>
 									<h3 class="recent-title">{spark.title}</h3>
 									<p class="recent-content">{spark.content?.substring(0, 120) || ''}...</p>
 									<div class="recent-meta">
@@ -246,12 +247,12 @@
 					{:else if recentArtifacts && recentArtifacts.length > 0}
 						<div class="recent-items">
 							{#each recentArtifacts as artifact}
-								<div class="recent-item">
-									<h3 class="recent-title">{artifact.title}</h3>
-									<p class="recent-content">{artifact.content?.substring(0, 120) || ''}...</p>
+								<div class="recent-item" onclick={() => goto('/artifacts')}>
+									<h3 class="recent-title">{artifact.sparkTitle || `Artifact from Spark ${artifact.sparkId.substring(0, 8)}`}</h3>
+									<p class="recent-content">{artifact.content?.text?.substring(0, 120) || ''}...</p>
 									<div class="recent-meta">
 										<span class="recent-date">{new Date(artifact.createdAt).toLocaleDateString()}</span>
-										<span class="artifact-type">{artifact.type}</span>
+										<span class="artifact-type">{artifact.typeName || artifact.status}</span>
 									</div>
 								</div>
 							{/each}
@@ -428,13 +429,21 @@
 		padding: var(--spacing-lg);
 		border: 1px solid var(--border-color);
 		border-radius: var(--border-radius-md);
-		transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+		transition: all var(--transition-normal);
 		cursor: pointer;
+		background: var(--surface-color);
 	}
 
 	.recent-item:hover {
 		border-color: var(--primary-color);
-		box-shadow: 0 1px 4px rgba(102, 126, 234, 0.1);
+		box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+		transform: translateY(-2px);
+		background: var(--card-bg);
+	}
+
+	.recent-item:active {
+		transform: translateY(0);
+		box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
 	}
 
 	.recent-title {
