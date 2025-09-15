@@ -497,6 +497,12 @@
 
 								<div class="artifact-actions">
 									<button
+										onclick={() => goto(`/artifacts/${artifact.id}`)}
+										class="btn btn-primary btn-sm"
+									>
+										View Details
+									</button>
+									<button
 										onclick={() => handleDeleteArtifact(artifact.id)}
 										class="btn btn-error btn-sm"
 									>
